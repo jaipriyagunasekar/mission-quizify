@@ -42,7 +42,8 @@ class DocumentProcessor:
         """
         
         # Step 1: Render a file uploader widget. Replace 'None' with the Streamlit file uploader code.
-        uploaded_files = st.file_uploader(
+        uploaded_files = st.file_uploader(label="Upload PDF Files",
+            type=['pdf'], accept_multiple_files=True
             #####################################
             # Allow only type `pdf`
             # Allow multiple PDFs for ingestion
@@ -50,6 +51,7 @@ class DocumentProcessor:
         )
         
         if uploaded_files is not None:
+            pages = []
             for uploaded_file in uploaded_files:
                 # Generate a unique identifier to append to the file's original name
                 unique_id = uuid.uuid4().hex
@@ -62,20 +64,30 @@ class DocumentProcessor:
                     f.write(uploaded_file.getvalue())
 
                 # Step 2: Process the temporary file
+                from langchain.document_loaders import PyPDFLoader
+
+                # Create an instance of PyPDFLoader and load
+                pdf_loader = PyPDFLoader(file_path=temp_file_path)
+
+                
+                
                 #####################################
                 # Use PyPDFLoader here to load the PDF and extract pages.
                 # https://python.langchain.com/docs/modules/data_connection/document_loaders/pdf#using-pypdf
                 # You will need to figure out how to use PyPDFLoader to process the temporary file.
                 
                 # Step 3: Then, Add the extracted pages to the 'pages' list.
+                pages.extend(pdf_loader.load())
                 #####################################
                 
                 # Clean up by deleting the temporary file.
                 os.unlink(temp_file_path)
             
             # Display the total number of pages processed.
-            st.write(f"Total pages processed: {len(self.pages)}")
+            st.write(f"Total pages processed: {len(pages)}")
+            self.pages = pages
         
 if __name__ == "__main__":
     processor = DocumentProcessor()
     processor.ingest_documents()
+   

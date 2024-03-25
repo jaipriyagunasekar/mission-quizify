@@ -1,5 +1,5 @@
 # embedding_client.py
-
+import streamlit as st
 from langchain_google_vertexai import VertexAIEmbeddings
 
 class EmbeddingClient:
@@ -33,8 +33,9 @@ class EmbeddingClient:
         # Initialize the VertexAIEmbeddings client with the given parameters
         # Read about the VertexAIEmbeddings wrapper from Langchain here
         # https://python.langchain.com/docs/integrations/text_embedding/google_generative_ai
-        self.client = VertexAIEmbeddings(
-            #### YOUR CODE HERE ####
+        self.client = VertexAIEmbeddings(model_name=model_name,
+        project=project,
+        location=location
         )
         
     def embed_query(self, query):
@@ -61,12 +62,20 @@ class EmbeddingClient:
             return None
 
 if __name__ == "__main__":
+    st.title("Text Embedding App")
     model_name = "textembedding-gecko@003"
-    project = "YOUR PROJECT ID HERE"
+    project = "sample-mission-417019"
     location = "us-central1"
 
     embedding_client = EmbeddingClient(model_name, project, location)
-    vectors = embedding_client.embed_query("Hello World!")
-    if vectors:
-        print(vectors)
-        print("Successfully used the embedding client!")
+   
+    query = st.text_input("Enter a text query:", "Hello World!")
+
+    # Button to trigger embedding
+    if st.button("Embed Query"):
+        vectors = embedding_client.embed_query(query)
+        if vectors:
+            st.write("Embeddings:")
+            st.write(vectors)
+        else:
+            st.write("Failed to retrieve embeddings.")

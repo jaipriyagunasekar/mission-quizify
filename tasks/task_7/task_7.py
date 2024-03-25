@@ -4,6 +4,7 @@ from langchain_core.prompts import PromptTemplate
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
+import json
 
 class QuizGenerator:
     def __init__(self, topic=None, num_questions=1, vectorstore=None):
@@ -26,30 +27,28 @@ class QuizGenerator:
 
         self.vectorstore = vectorstore
         self.llm = None
-        self.system_template = """
-            You are a subject matter expert on the topic: {topic}
-            
-            Follow the instructions to create a quiz question:
-            1. Generate a question based on the topic provided and context as key "question"
-            2. Provide 4 multiple choice answers to the question as a list of key-value pairs "choices"
-            3. Provide the correct answer for the question from the list of answers as key "answer"
-            4. Provide an explanation as to why the answer is correct as key "explanation"
-            
+        self.system_template ="""
+              Follow the instructions to create a quiz question:
+                1. Generate a question based on the topic provided and context as key "question"
+                2. Provide 4 multiple choice answers to the question as a list of key-value pairs "choices"
+                3. Provide the correct answer for the question from the list of answers as key "answer"
+                4. Provide an explanation as to why the answer is correct as key "explanation"
+    
             You must respond as a JSON object with the following structure:
-            {{
-                "question": "<question>",
-                "choices": [
-                    {{"key": "A", "value": "<choice>"}},
-                    {{"key": "B", "value": "<choice>"}},
-                    {{"key": "C", "value": "<choice>"}},
-                    {{"key": "D", "value": "<choice>"}}
-                ],
-                "answer": "<answer key from choices list>",
-                "explanation": "<explanation as to why the answer is correct>"
-            }}
-            
-            Context: {context}
-            """
+        {{
+            "question": "<question>",
+            "choices": [
+                {{"key": "A", "value": "<choice>"}},
+                {{"key": "B", "value": "<choice>"}},
+                {{"key": "C", "value": "<choice>"}},
+                {{"key": "D", "value": "<choice>"}}
+            ],
+            "answer": "<answer key from choices list>",
+            "explanation": "<explanation as to why the answer is correct>"
+        }}
+    
+        Context: {{context}}
+        """
     
     def init_llm(self):
         """
@@ -70,9 +69,12 @@ class QuizGenerator:
 
         Note: Ensure you have appropriate access or API keys if required by the model or platform.
         """
-        self.llm = VertexAI(
+        self.llm = VertexAI(model_name="gemini-pro",
+                            temperature=0.5,
+                            max_output_tokens=400,
             ############# YOUR CODE HERE ############
         )
+        
         
     def generate_question_with_vectorstore(self):
         """
@@ -103,20 +105,30 @@ class QuizGenerator:
         # Initialize the LLM from the 'init_llm' method if not already initialized
         # Raise an error if the vectorstore is not initialized on the class
         ############# YOUR CODE HERE ############
+        if self.llm is None or self.vectorstore is None:
+            raise Exception("LLM or vectorstore is not initialized or available")
         
         from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 
         ############# YOUR CODE HERE ############
         # Enable a Retriever using the as_retriever() method on the VectorStore object
         # HINT: Use the vectorstore as the retriever initialized on the class
-        ############# YOUR CODE HERE ############
         
         ############# YOUR CODE HERE ############
+        retriever = self.vectorstore.as_retriever()
+        ############# YOUR CODE HERE ############
+       # print(type(self.system_template.format(topic=self.topic, context="")))
+        #system_template_str = self.system_template.format(topic=self.topic, context="")
+     
+        
+        
+        
+        
         # Use the system template to create a PromptTemplate
         # HINT: Use the .from_template method on the PromptTemplate class and pass in the system template
         ############# YOUR CODE HERE ############
-        
-        # RunnableParallel allows Retriever to get relevant documents
+        prompt_template = PromptTemplate.from_template(self.system_template)
+         # RunnableParallel allows Retriever to get relevant documents
         # RunnablePassthrough allows chain.invoke to send self.topic to LLM
         setup_and_retrieval = RunnableParallel(
             {"context": retriever, "topic": RunnablePassthrough()}
@@ -125,6 +137,7 @@ class QuizGenerator:
         ############# YOUR CODE HERE ############
         # Create a chain with the Retriever, PromptTemplate, and LLM
         # HINT: chain = RETRIEVER | PROMPT | LLM 
+        chain =  setup_and_retrieval | prompt_template | self.llm
         ############# YOUR CODE HERE ############
 
         # Invoke the chain with the topic as input
@@ -141,7 +154,7 @@ if __name__ == "__main__":
     
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR-PROJECT-ID-HERE",
+        "project": "sample-mission-417019",
         "location": "us-central1"
     }
     
@@ -154,7 +167,7 @@ if __name__ == "__main__":
         embed_client = EmbeddingClient(**embed_config) # Initialize from Task 4
     
         chroma_creator = ChromaCollectionCreator(processor, embed_client)
-
+        
         question = None
     
         with st.form("Load Data to Chroma"):
@@ -162,7 +175,9 @@ if __name__ == "__main__":
             st.write("Select PDFs for Ingestion, the topic for the quiz, and click Generate!")
             
             topic_input = st.text_input("Topic for Generative Quiz", placeholder="Enter the topic of the document")
+            
             questions = st.slider("Number of Questions", min_value=1, max_value=10, value=1)
+
             
             submitted = st.form_submit_button("Submit")
             if submitted:
@@ -171,11 +186,13 @@ if __name__ == "__main__":
                 st.write(topic_input)
                 
                 # Test the Quiz Generator
-                generator = QuizGenerator(topic_input, questions, chroma_creator)
+                generator = QuizGenerator(topic_input, questions, chroma_creator.db)
+                generator.init_llm() 
                 question = generator.generate_question_with_vectorstore()
+                
 
     if question:
-        screen.empty()
+       # screen.empty()
         with st.container():
-            st.header("Generated Quiz Question: ")
-            st.write(question)
+            st.sidebar.header("Generated Quiz Question: ")
+            st.sidebar.write(question)

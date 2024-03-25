@@ -124,26 +124,24 @@ class QuizGenerator:
         self.question_bank = [] # Reset the question bank
 
         for _ in range(self.num_questions):
-            ##### YOUR CODE HERE #####
-            question_str = # Use class method to generate question
-            
-            ##### YOUR CODE HERE #####
+            question_str = self.generate_question_with_vectorstore()
             try:
-                # Convert the JSON String to a dictionary
+                question = json.loads(question_str)# Convert the JSON String to a dictionary
             except json.JSONDecodeError:
                 print("Failed to decode question JSON.")
                 continue  # Skip this iteration if JSON decoding fails
-            ##### YOUR CODE HERE #####
+            
+            
 
-            ##### YOUR CODE HERE #####
+            
+         
             # Validate the question using the validate_question method
             if self.validate_question(question):
                 print("Successfully generated unique question")
+                self.question_bank.append(question)
                 # Add the valid and unique question to the bank
             else:
                 print("Duplicate or invalid question detected.")
-            ##### YOUR CODE HERE #####
-
         return self.question_bank
 
     def validate_question(self, question: dict) -> bool:
@@ -166,10 +164,12 @@ class QuizGenerator:
 
         Note: This method assumes `question` is a valid dictionary and `question_bank` has been properly initialized.
         """
-        ##### YOUR CODE HERE #####
-        # Consider missing 'question' key as invalid in the dict object
-        # Check if a question with the same text already exists in the self.question_bank
-        ##### YOUR CODE HERE #####
+        is_unique = True
+        for q in self.question_bank:
+            if q == question:
+                is_unique = False
+                break
+        
         return is_unique
 
 
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     
     embed_config = {
         "model_name": "textembedding-gecko@003",
-        "project": "YOUR-PROJECT-ID-HERE",
+        "project": "sample-mission-417019",
         "location": "us-central1"
     }
     
@@ -209,13 +209,19 @@ if __name__ == "__main__":
                 st.write(topic_input)
                 
                 # Test the Quiz Generator
-                generator = QuizGenerator(topic_input, questions, chroma_creator)
+                generator = QuizGenerator(topic_input, questions, chroma_creator.db)
                 question_bank = generator.generate_quiz()
                 question = question_bank[0]
 
     if question_bank:
         screen.empty()
         with st.container():
-            st.header("Generated Quiz Question: ")
+            st.header("Generated Quiz Questions: ")
             for question in question_bank:
-                st.write(question)
+                st.subheader(question.get("question"))
+                st.write("Choices:")
+                for choice in question.get("choices"):
+                    st.write(f"{choice['key']}: {choice['value']}")
+                st.write(f"Answer: {question.get('answer')}")
+                st.write(f"Explanation: {question.get('explanation')}")
+                st.write("-------------------------------")
