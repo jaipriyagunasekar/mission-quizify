@@ -1,0 +1,2 @@
+
+"Welcome to Mission Quizify! This repository contains tasks ranging from setting up Google Cloud for AI projects to developing a quiz generator with Streamlit UI. Dive into coding challenges, data pipeline integration, and crafting unique quizzes using AI models. Explore each task's documentation and completed mission. Let's embark on this journey to enhance your AI skills and quiz-making abilities!"
